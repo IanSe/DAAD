@@ -11,6 +11,7 @@ class GetdirsSpider(scrapy.Spider):
     def start_requests(self):
         file = open("/home/darmasrmz/DAAD/data-analysys-apps/h3_scrapy/bookscrap/books_urls.txt", 'r')
         book_urls = file.readlines()
+        # book_urls = [ 'https://www.goodreads.com/book/show/15745950-walking-disaster\n' ]
         for url in book_urls:
             yield scrapy.Request(url=url[:-1], callback=self.parse_book)
 
@@ -41,7 +42,16 @@ class GetdirsSpider(scrapy.Spider):
             publication_date = self.driver.find_element(By.XPATH, '//div[@class="DescListItem"]//dt[text()="Published"]//following-sibling::dd/div[@class="TruncatedContent"]/div[@class="TruncatedContent__text TruncatedContent__text--small"]').text.split('by', 1)[0]
         except:
             publication_date = None
-        sales_rank = None
+        try:
+            rank = self.driver.find_element(By.XPATH,  "//div[span/@data-testid='ratingsCount']").text
+            temp = rank.split(' ')
+            rank = temp[0]
+            reviews = temp[1]
+            reviews = int(''.join(i for i in reviews if i.isdigit()))
+            rank = int(rank.replace(',', ''))
+        except:
+            rank = None
+            reviews = None
         try:
             pages = self.driver.find_element(By.XPATH, '//div[@class="DescListItem"]//dt[text()="Format"]//following-sibling::dd/div[@class="TruncatedContent"]/div[@class="TruncatedContent__text TruncatedContent__text--small"]').text.split(' ', 1)[0]
         except:
@@ -50,16 +60,19 @@ class GetdirsSpider(scrapy.Spider):
             ebook_price = self.driver.find_element(By.XPATH, '//button[@class="Button Button--buy Button--medium Button--block"]').text.split('$', 1)[1]
         except:
             ebook_price = None
-        related = self.driver.find_element(By.XPATH, '//ul[@aria-label="Top genres for this book"]').text.replace('\n',' - ').split('...', 1)[0]
+
+        genres = self.driver.find_element(By.XPATH, '//ul[@aria-label="Top genres for this book"]').text.replace('\n',' - ').split('...', 1)[0]
+
         book_item = BookItem()
         book_item['isbn'] = isbn
         book_item['title'] = title
         book_item['authors'] = authors
         book_item['publisher'] = publisher
         book_item['publication_date'] = publication_date
-        book_item['sales_rank'] = sales_rank
+        book_item['reviews'] = reviews
+        book_item['rank'] = rank
         book_item['pages'] = pages
         book_item['ebook_price'] = ebook_price
-        book_item['related'] = related
+        book_item['genres'] = genres
         yield book_item
         self.driver.quit()
